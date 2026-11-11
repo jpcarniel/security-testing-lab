@@ -1,61 +1,68 @@
 # Security Testing Lab
 
-Laboratório de teste de segurança de aplicação web. Cada falha é explorada contra um
-alvo deliberadamente vulnerável, documentada num write-up e automatizada num script
-reproduzível, seguindo a taxonomia do OWASP Top 10.
+Um laboratório onde eu quebro uma aplicação web de propósito, documento como quebrei e
+deixo o ataque automatizado pra qualquer pessoa reproduzir. O alvo é o OWASP Juice Shop,
+que roda local via Docker, então nada aqui depende de bater em sistema de ninguém.
 
-## Alvo
+Cada falha vira três coisas: um write-up que explica o ataque e a correção, um script que
+reproduz o ataque sozinho, e uma linha na tabela abaixo. A ideia é mostrar não só que eu
+acho a falha, mas que sei provar e automatizar a prova.
 
-[OWASP Juice Shop](https://owasp.org/www-project-juice-shop/), aplicação propositalmente
-vulnerável mantida pela OWASP. Roda localmente via Docker, então qualquer pessoa clona o
-repositório e reproduz os ataques do zero.
+## Subir o alvo
 
 ```bash
-docker compose up -d        # sobe o alvo em http://localhost:3000
-docker compose down         # derruba o alvo
+docker compose up -d        # alvo em http://localhost:3000
+docker compose down         # derruba quando terminar
 ```
 
-## Como reproduzir um ataque
+## Rodar os ataques
 
-Cada script em `exploits/` executa o ataque de ponta a ponta contra o alvo local e valida
-o resultado, no mesmo espírito de uma suíte de testes: baseline esperado, ataque, asserção.
+Os exploits ficam em `exploits/`. Cada um sobe o ataque de ponta a ponta e termina com
+`PASS` quando a falha se confirma, no mesmo espírito de um teste automatizado: baseline,
+ataque, asserção.
 
 ```bash
 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
-./venv/bin/python exploits/01_sql_injection_login.py
+./venv/bin/playwright install chromium     # só o exploit 05 (XSS) precisa de navegador
+
+bash exploits/run_all.sh                    # roda todos e resume o placar
 ```
 
-Saída esperada: baseline negado com HTTP 401, ataque autenticando como admin e `PASS` ao final.
+## Falhas encontradas
 
-## Write-ups
+| # | Falha | OWASP | Severidade | Prova |
+|---|-------|-------|------------|-------|
+| [01](writeups/01-sql-injection-login.md) | Bypass de login por SQL injection | A03 Injection | Crítica | [exploit](exploits/01_sql_injection_login.py) |
+| [02](writeups/02-rate-limiting-login.md) | Login sem rate limiting, aberto a brute force | A07 Auth Failures | Alta | [sonda k6](performance/rate-limit-login.js) |
+| [03](writeups/03-idor-basket.md) | IDOR: ler a cesta de outro usuário | A01 Access Control | Alta | [exploit](exploits/03_idor_basket.py) |
+| [04](writeups/04-sensitive-data-ftp.md) | Arquivos sensíveis no /ftp e bypass por null byte | A01 / A05 | Alta | [exploit](exploits/04_ftp_path_traversal.py) |
+| [05](writeups/05-xss-search-dom.md) | DOM XSS na busca | A03 Injection | Média | [exploit](exploits/05_xss_search_dom.py) |
 
-| # | Falha | Categoria OWASP | Severidade | Status |
-|---|-------|-----------------|------------|--------|
-| [01](writeups/01-sql-injection-login.md) | Bypass de autenticação via SQL injection | A03 Injection | Crítica | Documentado |
-| [02](writeups/02-rate-limiting-login.md) | Ausência de rate limiting no login (brute force) | A07 Auth Failures | Alta | Documentado |
+## Performance e resiliência
 
-## Stack
+A pasta `performance/` tem uma suíte [k6](performance/README.md) que mede o alvo sob carga
+e cobre o lado da disponibilidade. Além do smoke, load, stress e spike, mora ali a sonda de
+rate limiting do login, que é onde teste de carga encontra teste de segurança.
 
-- **Alvo:** OWASP Juice Shop (Docker)
-- **Interceptação e manipulação:** Burp Suite, cURL
-- **Automação de exploração:** Python (requests)
-- **Resiliência, carga e rate limiting:** k6, em `performance/`
-- **Escaneamento automatizado (DAST):** planejado, OWASP ZAP
-
-## Estrutura
+## Como está organizado
 
 ```
 security-testing-lab/
 ├── docker-compose.yml   # sobe o alvo vulnerável
-├── writeups/            # 1 relatório por falha: ataque, PoC, impacto, correção
-├── exploits/            # scripts que reproduzem cada ataque de forma automatizada
-├── performance/         # suíte k6: smoke, load e sonda de rate limiting
-└── evidence/            # capturas de tela e saídas usadas nos write-ups
+├── writeups/            # um relatório por falha: ataque, prova, impacto, correção
+├── exploits/            # scripts que reproduzem cada ataque, mais o run_all.sh
+├── performance/         # suíte k6: smoke, load, stress, spike, rate limiting
+└── evidence/            # capturas usadas nos write-ups
 ```
 
-## Aviso
+## Ferramentas
 
-Todos os testes são executados contra alvos locais de propriedade do autor ou contra
-aplicações explicitamente projetadas para treino de segurança. Técnicas aqui documentadas
-servem a aprendizado e teste autorizado.
+Burp Suite e cURL pra interceptar e manipular as requisições, Python com requests pra
+automatizar os exploits de API, Playwright pros ataques que só aparecem no navegador, e k6
+pra carga e resiliência.
+
+## Sobre o escopo
+
+Tudo roda contra um alvo local, de minha propriedade, feito de propósito pra treino de
+segurança. O objetivo é aprender e demonstrar teste de segurança autorizado.

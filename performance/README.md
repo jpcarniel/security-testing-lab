@@ -14,6 +14,8 @@ Alvo no ar via `docker compose up -d` (a partir da raiz do repositório).
 |--------|-----------|----------------|
 | `smoke.js` | Sanidade: 1 usuário virtual valida que o alvo responde e o script está são. Rode antes dos demais. | 15s |
 | `load.js` | Carga: rampa até 30 usuários navegando (home, catálogo, busca), mede latência e erro sob carga sustentada contra um SLO. | ~70s |
+| `stress.js` | Limite: empurra em degraus até 200 usuários pra achar onde a latência dispara e os erros começam. | ~70s |
+| `spike.js` | Pico: sobe de 10 pra 200 usuários de repente e observa se o sistema aguenta e se recupera depois. | ~55s |
 | `rate-limit-login.js` | Segurança: dispara uma rajada de tentativas de login e verifica se há bloqueio por rate limit (429). A ausência é o achado. | 15s |
 
 ## Como rodar
@@ -21,6 +23,8 @@ Alvo no ar via `docker compose up -d` (a partir da raiz do repositório).
 ```bash
 k6 run performance/smoke.js
 k6 run performance/load.js
+k6 run performance/stress.js
+k6 run performance/spike.js
 k6 run performance/rate-limit-login.js
 ```
 
