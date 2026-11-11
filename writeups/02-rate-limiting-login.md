@@ -16,33 +16,33 @@ ataques de brute force e credential stuffing.
 ## Ambiente
 
 - Alvo: OWASP Juice Shop em `http://localhost:3000` (via `docker compose up -d`)
-- Ferramenta: k6, script `performance/rate-limit-login.js`
+- Ferramenta: Python, script `exploits/02_login_no_rate_limit.py`
 
 ## Passos de reprodução
 
-A sonda dispara tentativas de login com email válido e senha incorreta a uma taxa
-constante, e conta quantas respostas foram 429 (bloqueio por rate limit) versus 401
-(tentativa processada normalmente).
+O exploit dispara uma rajada de tentativas de login com email válido e senha incorreta, e
+conta quantas respostas foram 429 (bloqueio por rate limit) versus 401 (tentativa
+processada normalmente).
 
 ```bash
-k6 run performance/rate-limit-login.js
+python3 exploits/02_login_no_rate_limit.py
 ```
 
 ### Resultado observado
 
 ```
-login_401_tentativa_processada...: 751    50.05/s
-login_429_bloqueado..............: 0      0/s
-THRESHOLD login_429_bloqueado 'count>0'  ->  FALHOU (count=0)
+120 tentativas de login em rajada
+processadas (401): 120   bloqueadas (429): 0
+PASS: nenhuma tentativa barrada, login sem rate limiting (brute force exposto).
 ```
 
-As 751 tentativas foram todas processadas. Nenhuma foi bloqueada. O threshold do teste
-esperava ao menos um 429, e a sua falha é a evidência direta da ausência de proteção.
+As 120 tentativas foram todas processadas e nenhuma foi barrada. Um servidor com rate
+limiting começaria a responder 429 depois de algumas tentativas dentro da mesma janela de
+tempo. Aqui isso nunca acontece.
 
-> Observação de leitura: a métrica nativa `http_req_failed` do k6 marca os 401 como
-> falha por não serem respostas 2xx. No contexto deste teste, 401 é o resultado esperado
-> de uma tentativa com senha incorreta. A métrica que responde à pergunta de segurança é
-> `login_429_bloqueado`, que ficou em zero.
+> Nota: a mesma falha também aparece sob a ótica de carga. O repositório
+> [k6-performance-testing](https://github.com/jpcarniel/k6-performance-testing) mede o lado
+> de disponibilidade do mesmo alvo com smoke, load, stress e spike.
 
 ## Causa raiz
 

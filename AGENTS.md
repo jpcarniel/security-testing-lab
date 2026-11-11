@@ -24,8 +24,6 @@ docker compose down
   o resultado com asserção explícita, imprimindo PASS ou FAIL. A maioria usa só `requests`;
   os ataques que só aparecem no navegador (DOM XSS) usam Playwright. Deps em
   `requirements.txt`, instaladas num `venv` local. `bash exploits/run_all.sh` roda todos.
-- **Suíte k6** em `performance/`: smoke, load, stress, spike e a sonda de rate limiting.
-  Cada script aceita `-e BASE_URL=...` e declara thresholds que definem passou ou falhou.
 - **Numeração** de write-up e exploit é compartilhada: `01-...md` casa com `01_...py`.
 - **Escopo ético:** só se testa alvo local ou aplicação de treino autorizada. Nunca apontar
   os scripts para sistemas de terceiros.
